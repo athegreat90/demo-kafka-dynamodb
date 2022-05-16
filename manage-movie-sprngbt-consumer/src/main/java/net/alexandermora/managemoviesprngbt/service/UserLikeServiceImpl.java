@@ -9,6 +9,7 @@ import net.alexandermora.managemoviesprngbt.domain.UserMovieLike;
 import net.alexandermora.managemoviesprngbt.dto.UserLikeDto;
 import net.alexandermora.managemoviesprngbt.dto.UserOrderDto;
 import net.alexandermora.managemoviesprngbt.helper.JsonHelper;
+import net.alexandermora.managemoviesprngbt.helper.KafkaHelper;
 import net.alexandermora.managemoviesprngbt.mapper.UserLikeMovieMapper;
 import net.alexandermora.managemoviesprngbt.repo.UserLikeRepo;
 import net.alexandermora.managemoviesprngbt.util.Constants;
@@ -37,6 +38,8 @@ public class UserLikeServiceImpl implements UserLikeService
 
     private final JsonHelper jsonHelper;
 
+    private final KafkaHelper kafkaHelper;
+
     @Override
     public void processUserLike(ConsumerRecord<Integer, String> consumerRecord) throws JsonProcessingException
     {
@@ -55,42 +58,25 @@ public class UserLikeServiceImpl implements UserLikeService
     }
 
     @Override
-    public void handleRecovery(ConsumerRecord<Integer,String> record)
+    public void handleRecovery(ConsumerRecord<Integer,String> consumerRecord)
     {
 
-        Integer key = record.key();
-        String message = record.value();
+        Integer key = consumerRecord.key();
+        String message = consumerRecord.value();
 
         ListenableFuture<SendResult<Integer,String>> listenableFuture = kafkaTemplate.send(Constants.USER_LIKE, key, message);
         listenableFuture.addCallback(new ListenableFutureCallback<>()
         {
             @Override
             public void onFailure(Throwable ex) {
-                handleFailure(key, message, ex);
+                kafkaHelper.handleFailure(key, message, ex);
             }
 
             @Override
             public void onSuccess(SendResult<Integer, String> result) {
-                handleSuccess(key, message, result);
+                kafkaHelper.handleSuccess(key, message, result);
             }
         });
     }
 
-    private void handleFailure(Integer key, String value, Throwable ex)
-    {
-        log.error("Error Sending the Message and the exception is {}", ex.getMessage());
-        try
-        {
-            throw ex;
-        }
-        catch (Throwable throwable)
-        {
-            log.error("Error in OnFailure: {}", throwable.getMessage());
-        }
-    }
-
-    private void handleSuccess(Integer key, String value, SendResult<Integer, String> result)
-    {
-        log.info("Message Sent SuccessFully for the key : {} and the value is {} , partition is {}", key, value, result.getRecordMetadata().partition());
-    }
 }

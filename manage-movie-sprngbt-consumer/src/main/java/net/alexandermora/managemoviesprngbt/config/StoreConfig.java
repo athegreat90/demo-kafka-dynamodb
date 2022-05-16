@@ -4,6 +4,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import net.alexandermora.managemoviesprngbt.error.KafkaCustomException;
 import net.alexandermora.managemoviesprngbt.service.MovieBuyService;
 import net.alexandermora.managemoviesprngbt.service.MovieRentService;
 import net.alexandermora.managemoviesprngbt.service.UserLikeService;
@@ -53,7 +54,6 @@ public class StoreConfig
         {
             return objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(o);
         } catch (JsonProcessingException e) {
-            e.printStackTrace();
             return "";
         }
     }
@@ -69,12 +69,8 @@ public class StoreConfig
                 .getIfAvailable(() -> new DefaultKafkaConsumerFactory<>(this.kafkaProperties.buildConsumerProperties())));
         factory.setConcurrency(3);
         factory.setErrorHandler(((thrownException, data) ->
-        {
-            log.info("Exception in consumerConfig is {} and the record is {}", thrownException.getMessage(), data);
-            //persist
-        }));
-//        factory.setRetryTemplate(retryTemplate());
-        //setRetryTemplate
+                log.info("Exception in consumerConfig is {} and the record is {}", thrownException.getMessage(), data)));
+
         factory.setStatefulRetry(Boolean.TRUE);
         factory.setRecoveryCallback((context ->
         {
@@ -106,35 +102,20 @@ public class StoreConfig
                         userLikeService.handleRecovery(consumerRecord);
                         break;
                     }
+                    default:
+                    {
+                        break;
+                    }
                 }
             }
             else
             {
                 log.info("Inside the non recoverable logic");
-                throw new RuntimeException(context.getLastThrowable().getMessage());
+                throw new KafkaCustomException(context.getLastThrowable().getMessage());
             }
 
             return null;
         }));
         return factory;
-    }
-
-    private RetryTemplate retryTemplate()
-    {
-        FixedBackOffPolicy fixedBackOffPolicy = new FixedBackOffPolicy();
-        fixedBackOffPolicy.setBackOffPeriod(1000);
-        RetryTemplate retryTemplate = new RetryTemplate();
-        retryTemplate.setRetryPolicy(simpleRetryPolicy());
-        retryTemplate.setBackOffPolicy(fixedBackOffPolicy);
-        return  retryTemplate;
-    }
-
-    private RetryPolicy simpleRetryPolicy()
-    {
-        Map<Class<? extends Throwable>, Boolean> exceptionsMap = new HashMap<>();
-        exceptionsMap.put(IllegalArgumentException.class, false);
-        exceptionsMap.put(RecoverableDataAccessException.class, true);
-        SimpleRetryPolicy simpleRetryPolicy = new SimpleRetryPolicy(3,exceptionsMap,true);
-        return simpleRetryPolicy;
     }
 }

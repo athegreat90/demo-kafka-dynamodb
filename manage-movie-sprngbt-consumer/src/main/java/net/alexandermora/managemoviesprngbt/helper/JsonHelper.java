@@ -19,7 +19,6 @@ public class JsonHelper
         }
         catch (JsonProcessingException e)
         {
-            e.printStackTrace();
             return null;
         }
     }

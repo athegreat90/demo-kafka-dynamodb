@@ -20,7 +20,6 @@ import javax.annotation.PostConstruct;
 @Component
 public class ExtraConfig
 {
-    private DynamoDBMapper dynamoDBMapper;
 
     private final AmazonDynamoDB amazonDynamoDB;
 
@@ -38,7 +37,7 @@ public class ExtraConfig
     @PostConstruct
     private void init()
     {
-        dynamoDBMapper = new DynamoDBMapper(amazonDynamoDB);
+        DynamoDBMapper dynamoDBMapper = new DynamoDBMapper(amazonDynamoDB);
 
         try
         {
