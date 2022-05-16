@@ -60,7 +60,6 @@ public class ManageServiceImpl implements ManageService
         }
         catch (JsonProcessingException e)
         {
-            e.printStackTrace();
             return null;
         }
     }
