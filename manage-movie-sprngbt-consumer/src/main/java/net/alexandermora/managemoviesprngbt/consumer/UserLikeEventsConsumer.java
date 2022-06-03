@@ -16,7 +16,7 @@ public class UserLikeEventsConsumer
 {
     private final UserLikeService userLikeService;
 
-    @KafkaListener(topics = {Constants.USER_LIKE})
+    @KafkaListener(topics = {Constants.USER_LIKE}, groupId = Constants.LISTENER_GROUP)
     public void onMessage(ConsumerRecord<Integer,String> consumerRecord) throws JsonProcessingException
     {
         log.info("ConsumerRecord : {} ", consumerRecord );

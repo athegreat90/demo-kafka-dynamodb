@@ -6,7 +6,9 @@ import com.amazonaws.services.dynamodbv2.model.CreateTableRequest;
 import com.amazonaws.services.dynamodbv2.model.ProvisionedThroughput;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.joda.JodaModule;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
+import net.alexandermora.managemoviesprngbt.domain.FailureRecord;
 import net.alexandermora.managemoviesprngbt.domain.UserMovieLike;
 import net.alexandermora.managemoviesprngbt.domain.UserOrder;
 import net.alexandermora.managemoviesprngbt.domain.UserRent;
@@ -18,14 +20,10 @@ import javax.annotation.PostConstruct;
 
 @Log4j2
 @Component
+@RequiredArgsConstructor
 public class ExtraConfig
 {
-
     private final AmazonDynamoDB amazonDynamoDB;
-
-    public ExtraConfig(AmazonDynamoDB amazonDynamoDB) {
-        this.amazonDynamoDB = amazonDynamoDB;
-    }
 
     @Bean
     public ObjectMapper objectMapper()
@@ -50,9 +48,14 @@ public class ExtraConfig
             tableRequest = dynamoDBMapper.generateCreateTableRequest(UserRent.class);
             tableRequest.setProvisionedThroughput(new ProvisionedThroughput(1L, 1L));
             amazonDynamoDB.createTable(tableRequest);
-        } catch (Exception e)
+
+            tableRequest = dynamoDBMapper.generateCreateTableRequest(FailureRecord.class);
+            tableRequest.setProvisionedThroughput(new ProvisionedThroughput(1L, 1L));
+            amazonDynamoDB.createTable(tableRequest);
+        }
+        catch (Exception e)
         {
-            log.error("Creating table:", e);
+            log.error("Creating table in post construct:", e);
         }
     }
 }

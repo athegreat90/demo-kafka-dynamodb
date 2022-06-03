@@ -6,20 +6,17 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.alexandermora.managemoviesprngbt.dto.UserOrderDto;
+import net.alexandermora.managemoviesprngbt.error.KafkaCustomException;
 import net.alexandermora.managemoviesprngbt.helper.JsonHelper;
-import net.alexandermora.managemoviesprngbt.helper.KafkaHelper;
 import net.alexandermora.managemoviesprngbt.mapper.UserOrderMapper;
 import net.alexandermora.managemoviesprngbt.repo.UserBuyRepo;
-import net.alexandermora.managemoviesprngbt.util.Constants;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
-import org.springframework.kafka.core.KafkaTemplate;
-import org.springframework.kafka.support.SendResult;
 import org.springframework.stereotype.Service;
-import org.springframework.util.concurrent.ListenableFuture;
-import org.springframework.util.concurrent.ListenableFutureCallback;
+import org.springframework.util.StringUtils;
 
 import java.util.List;
 import java.util.Objects;
+import java.util.stream.Collectors;
 
 @RequiredArgsConstructor
 @Service
@@ -28,15 +25,11 @@ public class MovieBuyServiceImpl implements MovieBuyService
 {
     private final ObjectMapper objectMapper;
 
-    private final KafkaTemplate<Integer, String> kafkaTemplate;
-
     private final UserBuyRepo userBuyRepo;
 
     private final UserOrderMapper userOrderMapper;
 
     private final JsonHelper jsonHelper;
-
-    private final KafkaHelper kafkaHelper;
 
     @Override
     public void processBuyMovie(ConsumerRecord<Integer, String> consumerRecord) throws JsonProcessingException
@@ -44,11 +37,27 @@ public class MovieBuyServiceImpl implements MovieBuyService
 
         var request = consumerRecord.value();
 
-        var orders = objectMapper.readValue(request, new TypeReference<List<UserOrderDto>>(){});
-
-        if (Objects.isNull(orders) || orders.isEmpty())
+        if (!StringUtils.hasText(request))
         {
             return;
+        }
+
+        var orders = objectMapper.readValue(request, new TypeReference<List<UserOrderDto>>(){});
+
+        log.info("Request Kafka: {} - Obj: {}", request, orders);
+
+        if (Objects.isNull(orders))
+        {
+            log.warn("Orders null");
+            return;
+        }
+
+        orders = orders.stream().filter(this::validateOrder).collect(Collectors.toList());
+
+        if (orders.isEmpty())
+        {
+            log.warn("Invalid Orders");
+            throw new KafkaCustomException("Invalid orders");
         }
 
         var domains = userOrderMapper.getOrders(orders);
@@ -58,26 +67,8 @@ public class MovieBuyServiceImpl implements MovieBuyService
         log.info("User buy orders: {}", jsonHelper.getJson(response));
     }
 
-
-    @Override
-    public void handleRecovery(ConsumerRecord<Integer,String> consumerRecord)
+    private boolean validateOrder(UserOrderDto o)
     {
-
-        Integer key = consumerRecord.key();
-        String message = consumerRecord.value();
-
-        ListenableFuture<SendResult<Integer,String>> listenableFuture = kafkaTemplate.send(Constants.MOVIE_BUY, key, message);
-        listenableFuture.addCallback(new ListenableFutureCallback<>()
-        {
-            @Override
-            public void onFailure(Throwable ex) {
-                kafkaHelper.handleFailure(key, message, ex);
-            }
-
-            @Override
-            public void onSuccess(SendResult<Integer, String> result) {
-                kafkaHelper.handleSuccess(key, message, result);
-            }
-        });
+        return StringUtils.hasText(o.getMovie()) && StringUtils.hasText(o.getUsername()) && Objects.nonNull(o.getCount());
     }
 }
