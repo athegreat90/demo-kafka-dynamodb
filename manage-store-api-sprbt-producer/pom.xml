@@ -18,6 +18,7 @@
         <java.version>11</java.version>
         <!-- JaCoCo Properties -->
         <jacoco.version>0.8.8</jacoco.version>
+        <testcontainer.version>1.17.2</testcontainer.version>
         <sonar.java.coveragePlugin>jacoco</sonar.java.coveragePlugin>
         <sonar.dynamicAnalysis>reuseReports</sonar.dynamicAnalysis>
         <sonar.jacoco.reportPath>${project.basedir}/../target/jacoco.exec</sonar.jacoco.reportPath>
@@ -61,8 +62,26 @@
         <!-- https://mvnrepository.com/artifact/org.testcontainers/kafka -->
         <dependency>
             <groupId>org.testcontainers</groupId>
+            <artifactId>testcontainers</artifactId>
+            <version>${testcontainer.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.testcontainers</groupId>
+            <artifactId>localstack</artifactId>
+            <version>${testcontainer.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.testcontainers</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <version>${testcontainer.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.testcontainers</groupId>
             <artifactId>kafka</artifactId>
-            <version>1.17.1</version>
+            <version>${testcontainer.version}</version>
             <scope>test</scope>
         </dependency>
 
