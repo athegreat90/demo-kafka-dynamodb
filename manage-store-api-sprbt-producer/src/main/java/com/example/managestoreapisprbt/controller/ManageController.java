@@ -18,12 +18,6 @@ public class ManageController
 {
     private final ManageService manageService;
 
-    @GetMapping("")
-    public String demo()
-    {
-        return "OK";
-    }
-
     @PostMapping("/buy")
     public void buy(@RequestBody List<UserOrderDto> body)
     {
